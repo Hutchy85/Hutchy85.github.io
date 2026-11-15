@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1120">
+  <meta name="description" content="Your six-month Sleeper Build workout, strength and protein tracker.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <title>Sleeper Build 6-Month Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              850: '#0f172a',
+              900: '#0b1120',
+              950: '#050811',
+            },
+            accent: {
+              blue: '#3b82f6',
+              cyan: '#06b6d4',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0b1120;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glow-blue {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-24 md:pb-8">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- INITIAL DATA STRUCTURES ---
+    const TARGET_LIFTS = [
+      { id: 'bench', name: 'Bench Press', start: 40, target: 80, unit: 'kg' },
+      { id: 'squat', name: 'Barbell Squat', start: 50, target: 100, unit: 'kg' },
+      { id: 'deadlift', name: 'Conventional Deadlift', start: 60, target: 130, unit: 'kg' },
+      { id: 'pullup', name: 'Weighted Pull-Ups', start: 0, target: 15, unit: 'kg added' },
+    ];
+
+    const WORKOUT_PROGRAMS = {
+      phase1: {
+        title: "Phase 1: Neural Foundation (Months 1–3)",
+        workouts: {
+          A: {
+            name: "Workout A: Push & Quads",
+            exercises: [
+              { name: "Barbell Back Squat", sets: 3, reps: "5", defaultWeight: 50, rest: 180 },
+              { name: "Flat Barbell Bench Press", sets: 3, reps: "5", defaultWeight: 40, rest: 180 },
+              { name: "Standing Overhead Press", sets: 3, reps: "5", defaultWeight: 30, rest: 120 },
+              { name: "Dips (Bodyweight or Machine)", sets: 3, reps: "6-8", defaultWeight: 0, rest: 90 },
+              { name: "Ab Wheel / Leg Raises", sets: 3, reps: "10-12", defaultWeight: 0, rest: 60 }
+            ]
+          },
+          B: {
+            name: "Workout B: Pull & Posterior",
+            exercises: [
+              { name: "Conventional Deadlift", sets: 3, reps: "5", defaultWeight: 60, rest: 180 },
+              { name: "Lat Pulldown / Pull-Ups", sets: 4, reps: "6-8", defaultWeight: 0, rest: 120 },
+              { name: "Bent-Over Barbell Rows", sets: 3, reps: "6", defaultWeight: 35, rest: 120 },
+              { name: "Cable Face Pulls", sets: 3, reps: "12-15", defaultWeight: 15, rest: 60 },
+              { name: "Plank Hold", sets: 3, reps: "45-60s", defaultWeight: 0, rest: 60 }
+            ]
+          }
+        }
+      },
+      phase2: {
+        title: "Phase 2: Sleeper Build (Months 4–6)",
+        workouts: {
+          A: {
+            name: "Workout A: High Tension Push",
+            exercises: [
+              { name: "Barbell Back Squat", sets: 4, reps: "4-6", defaultWeight: 75, rest: 180 },
+              { name: "Flat Barbell Bench Press", sets: 4, reps: "4-6", defaultWeight: 65, rest: 180 },
+              { name: "Incline Dumbbell Press", sets: 3, reps: "8", defaultWeight: 24, rest: 120 },
+              { name: "Standing Overhead Press", sets: 3, reps: "5", defaultWeight: 42.5, rest: 120 },
+              { name: "Dumbbell Lateral Raises", sets: 3, reps: "12-15", defaultWeight: 10, rest: 60 },
+              { name: "Hanging Leg Raises", sets: 3, reps: "10-12", defaultWeight: 0, rest: 60 }
+            ]
+          },
+          B: {
+            name: "Workout B: Power & Lat Width",
+            exercises: [
+              { name: "Conventional Deadlift", sets: 3, reps: "3-5", defaultWeight: 100, rest: 210 },
+              { name: "Weighted Pull-Ups", sets: 4, reps: "5", defaultWeight: 5, rest: 150 },
+              { name: "Heavy Single-Arm DB Rows", sets: 3, reps: "6-8", defaultWeight: 30, rest: 90 },
+              { name: "Cable Face Pulls", sets: 3, reps: "15", defaultWeight: 20, rest: 60 },
+              { name: "Farmers Walk (Carries)", sets: 3, reps: "30 meters", defaultWeight: 28, rest: 90 }
+            ]
+          }
+        }
+      }
+    };
+
+    const FORM_GUIDES = [
+      {
+        id: 'bench',
+        name: 'Bench Press',
+        cues: [
+          'Eyes directly under the bar before unwrapping.',
+          'Pinch shoulder blades together like holding a pen between them.',
+          'Feet flat on floor; push legs down to create a tight arch.',
+          'Lower bar with control to mid-chest (nipple line).',
+          'Elbows tucked at 45° angle, not flared out wide.'
+        ]
+      },
+      {
+        id: 'squat',
+        name: 'Barbell Squat',
+        cues: [
+          'Set rack height at chest-level (never reach on toes).',
+          'Rest bar securely on upper back traps, not your neck bone.',
+          'Feet shoulder-width apart, toes pointed out ~15 degrees.',
+          'Take deep breath into gut, break at hips and knees together.',
+          'Squat to parallel; drive mid-foot back up smoothly.'
+        ]
+      },
+      {
+        id: 'deadlift',
+        name: 'Conventional Deadlift',
+        cues: [
+          'Bar over mid-foot (approx 1 inch away from shins).',
+          'Feet hip-width apart; grip bar outside your legs.',
+          'Pull chest tall to flatten spine and activate lats (slack out of bar).',
+          'Push floor away with legs—do not yank with arms/lower back.',
+          'Keep bar dragging close against shins and thighs.'
+        ]
+      },
+      {
+        id: 'ohp',
+        name: 'Standing Overhead Press',
+        cues: [
+          'Bar rests across collarbones/delts in open palms.',
+          'Squeeze glutes tight and lock core to prevent lower back arch.',
+          'Press straight up; pull chin back slightly to clear face.',
+          'As bar passes forehead, push head forward to lock out over shoulders.'
+        ]
+      },
+      {
+        id: 'pullup',
+        name: 'Weighted Pull-Ups',
+        cues: [
+          'Grip shoulder-width apart or slightly wider.',
+          'Depress shoulder blades down first before pulling arms.',
+          'Pull chest up to bar, driving elbows down toward your hips.',
+          'Lower completely under 2-second control to full arm hang.'
+        ]
+      }
+    ];
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      // Local Storage State
+      const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, logger, protein, guide, stats
+      const [currentPhase, setCurrentPhase] = useState('phase1'); // phase1 or phase2
+      const [selectedWorkout, setSelectedWorkout] = useState('A'); // A or B
+      const [currentWeek, setCurrentWeek] = useState(1);
+      const [proteinIntake, setProteinIntake] = useState(0);
+      const [proteinGoal, setProteinGoal] = useState(150); // Mid-range of 140g-160g
+      const [bodyWeight, setBodyWeight] = useState(80);
+      const [workoutLogs, setWorkoutLogs] = useState([]);
+      const [maxLifts, setMaxLifts] = useState({
+        bench: 40,
+        squat: 50,
+        deadlift: 60,
+        pullup: 0
+      });
+
+      // Active Workout Session State
+      const [isWorkingOut, setIsWorkingOut] = useState(false);
+      const [activeSessionData, setActiveSessionData] = useState([]);
+      
+      // Timer State
+      const [timerTime, setTimerTime] = useState(0);
+      const [isTimerRunning, setIsTimerRunning] = useState(false);
+      const timerRef = useRef(null);
+
+      // Load Data from LocalStorage on mount
+      useEffect(() => {
+        const savedLogs = localStorage.getItem('sleeper_workout_logs');
+        if (savedLogs) setWorkoutLogs(JSON.parse(savedLogs));
+
+        const savedProtein = localStorage.getItem('sleeper_protein_today');
+        const savedProteinDate = localStorage.getItem('sleeper_protein_date');
+        const todayStr = new Date().toDateString();
+
+        if (savedProteinDate === todayStr && savedProtein) {
+          setProteinIntake(Number(savedProtein));
+        } else {
+          localStorage.setItem('sleeper_protein_date', todayStr);
+          localStorage.setItem('sleeper_protein_today', '0');
+          setProteinIntake(0);
+        }
+
+        const savedMaxes = localStorage.getItem('sleeper_max_lifts');
+        if (savedMaxes) setMaxLifts(JSON.parse(savedMaxes));
+
+        const savedWeek = localStorage.getItem('sleeper_current_week');
+        if (savedWeek) setCurrentWeek(Number(savedWeek));
+      }, []);
+
+      // Save Data Effects
+      useEffect(() => {
+        localStorage.setItem('sleeper_workout_logs', JSON.stringify(workoutLogs));
+      }, [workoutLogs]);
+
+      useEffect(() => {
+        localStorage.setItem('sleeper_protein_today', proteinIntake.toString());
+        localStorage.setItem('sleeper_protein_date', new Date().toDateString());
+      }, [proteinIntake]);
+
+      useEffect(() => {
+        localStorage.setItem('sleeper_max_lifts', JSON.stringify(maxLifts));
+      }, [maxLifts]);
+
+      useEffect(() => {
+        localStorage.setItem('sleeper_current_week', currentWeek.toString());
+        if (currentWeek > 12) setCurrentPhase('phase2');
+        else setCurrentPhase('phase1');
+      }, [currentWeek]);
+
+      // Timer Effect
+      useEffect(() => {
+        if (isTimerRunning && timerTime > 0) {
+          timerRef.current = setInterval(() => {
+            setTimerTime(prev => prev - 1);
+          }, 1000);
+        } else if (timerTime === 0) {
+          setIsTimerRunning(false);
+          clearInterval(timerRef.current);
+        }
+        return () => clearInterval(timerRef.current);
+      }, [isTimerRunning, timerTime]);
+
+      const startRestTimer = (seconds) => {
+        setTimerTime(seconds);
+        setIsTimerRunning(true);
+      };
+
+      const formatTime = (secs) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+      };
+
+      // Start Workout Session
+      const handleStartWorkout = () => {
+        const program = WORKOUT_PROGRAMS[currentPhase].workouts[selectedWorkout];
+        const initialData = program.exercises.map(ex => ({
+          name: ex.name,
+          sets: Array.from({ length: ex.sets }, (_, i) => ({
+            setNum: i + 1,
+            weight: ex.defaultWeight,
+            reps: parseInt(ex.reps) || 5,
+            rir: 2,
+            completed: false
+          }))
+        }));
+        setActiveSessionData(initialData);
+        setIsWorkingOut(true);
+      };
+
+      // Update Set details in Active Session
+      const handleUpdateSet = (exIdx, setIdx, field, value) => {
+        const updated = [...activeSessionData];
+        updated[exIdx].sets[setIdx][field] = value;
+        setActiveSessionData(updated);
+      };
+
+      const toggleSetComplete = (exIdx, setIdx, restSecs) => {
+        const updated = [...activeSessionData];
+        const isComp = !updated[exIdx].sets[setIdx].completed;
+        updated[exIdx].sets[setIdx].completed = isComp;
+        setActiveSessionData(updated);
+
+        if (isComp) {
+          startRestTimer(restSecs || 120);
+        }
+      };
+
+      // Finish & Save Session
+      const handleFinishWorkout = () => {
+        let totalVol = 0;
+        const newMaxes = { ...maxLifts };
+
+        activeSessionData.forEach(ex => {
+          ex.sets.forEach(s => {
+            if (s.completed) {
+              const setVol = Number(s.weight) * Number(s.reps);
+              totalVol += setVol;
+
+              // Check max lifts updates (Rough 1RM calculation: weight * (1 + reps/30))
+              const est1RM = Math.round(Number(s.weight) * (1 + Number(s.reps) / 30));
+              
+              if (ex.name.includes("Bench") && est1RM > newMaxes.bench) newMaxes.bench = est1RM;
+              if (ex.name.includes("Squat") && est1RM > newMaxes.squat) newMaxes.squat = est1RM;
+              if (ex.name.includes("Deadlift") && est1RM > newMaxes.deadlift) newMaxes.deadlift = est1RM;
+              if (ex.name.includes("Pull-Ups") && s.weight > newMaxes.pullup) newMaxes.pullup = Number(s.weight);
+            }
+          });
+        });
+
+        const newLogEntry = {
+          id: Date.now(),
+          date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          phase: currentPhase === 'phase1' ? 'Phase 1' : 'Phase 2',
+          workout: selectedWorkout,
+          name: WORKOUT_PROGRAMS[currentPhase].workouts[selectedWorkout].name,
+          exercises: activeSessionData,
+          totalVolume: totalVol
+        };
+
+        setWorkoutLogs([newLogEntry, ...workoutLogs]);
+        setMaxLifts(newMaxes);
+        setIsWorkingOut(false);
+        setActiveTab('dashboard');
+      };
+
+      // Add Quick Protein
+      const addProtein = (grams) => {
+        setProteinIntake(prev => Math.min(prev + grams, 300));
+      };
+
+      // Export Log History as CSV
+      const exportCSV = () => {
+        if (workoutLogs.length === 0) {
+          alert('No workout logs to export yet!');
+          return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,Date,Phase,Workout,Exercise,Set,Weight (kg),Reps,RIR,Volume (kg)\n";
+        workoutLogs.forEach(log => {
+          log.exercises.forEach(ex => {
+            ex.sets.forEach(s => {
+              if (s.completed) {
+                const vol = s.weight * s.reps;
+                csvContent += `"${log.date}","${log.phase}","${log.workout}","${ex.name}",${s.setNum},${s.weight},${s.reps},${s.rir},${vol}\n`;
+              }
+            });
+          });
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Sleeper_Build_Logs_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      return (
+        <div className="max-w-4xl mx-auto px-4 pt-6 pb-20">
+          
+          {/* HEADER */}
+          <header className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  {currentPhase === 'phase1' ? 'PHASE 1: NEURAL BASE' : 'PHASE 2: SLEEPER BUILD'}
+                </span>
+                <span className="text-xs text-slate-400">Week {currentWeek} of 24</span>
+              </div>
+              <h1 className="text-2xl font-black tracking-tight text-white mt-1">SLEEPER BUILD <span className="text-blue-500">80KG</span></h1>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentWeek(w => Math.max(1, w - 1))}
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded border border-slate-700"
+              >
+                - Wk
+              </button>
+              <button 
+                onClick={() => setCurrentWeek(w => Math.min(24, w + 1))}
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded border border-slate-700"
+              >
+                + Wk
+              </button>
+            </div>
+          </header>
+
+          {/* ACTIVE REST TIMER FLOATING BANNER */}
+          {timerTime > 0 && (
+            <div className="fixed top-4 right-4 left-4 md:left-auto md:w-80 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-xl flex items-center justify-between z-50 animate-bounce">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-semibold text-blue-100 uppercase tracking-wider">Rest Timer</p>
+                  <p className="text-xl font-bold font-mono">{formatTime(timerTime)}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setTimerTime(0)} 
+                className="text-xs bg-blue-800 hover:bg-blue-900 px-2.5 py-1.5 rounded-lg"
+              >
+                Skip Rest
+              </button>
+            </div>
+          )}
+
+          {/* MAIN NAVIGATION TABS */}
+          <nav className="flex bg-slate-900 p-1 rounded-xl mb-6 border border-slate-800 text-xs md:text-sm font-medium overflow-x-auto">
+            {[
+              { id: 'dashboard', label: 'Dashboard' },
+              { id: 'logger', label: isWorkingOut ? '⚡ Active Session' : 'Workout Log' },
+              { id: 'protein', label: 'Protein Tracker' },
+              { id: 'guide', label: 'Form Cues' },
+              { id: 'stats', label: 'History & CSV' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-2.5 px-3 rounded-lg transition-all text-center whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white font-semibold shadow-md'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* TAB 1: DASHBOARD */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              
+              {/* CORE STATS OVERVIEW CARDS */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="glass-card p-4 rounded-xl border-l-4 border-blue-500">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Body Weight</p>
+                  <p className="text-2xl font-bold text-white mt-1">80.0 <span className="text-xs text-slate-400">kg</span></p>
+                  <p className="text-xs text-emerald-400 mt-1">Lean Baseline Frame</p>
+                </div>
+
+                <div className="glass-card p-4 rounded-xl border-l-4 border-emerald-500">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Protein Today</p>
+                  <p className="text-2xl font-bold text-white mt-1">{proteinIntake} <span className="text-xs text-slate-400">/ {proteinGoal}g</span></p>
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, (proteinIntake/proteinGoal)*100)}%` }}></div>
+                  </div>
+                </div>
+
+                <div className="glass-card p-4 rounded-xl border-l-4 border-amber-500">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Current Phase</p>
+                  <p className="text-lg font-bold text-white mt-1">{currentWeek <= 12 ? 'Phase 1' : 'Phase 2'}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{currentWeek <= 12 ? 'Neural Foundation' : 'Hypertrophy Density'}</p>
+                </div>
+
+                <div className="glass-card p-4 rounded-xl border-l-4 border-purple-500">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Logged Workouts</p>
+                  <p className="text-2xl font-bold text-white mt-1">{workoutLogs.length}</p>
+                  <p className="text-xs text-slate-400 mt-1">Sessions Complete</p>
+                </div>
+              </div>
+
+              {/* 6-MONTH TARGET LIFTS PROGRESS */}
+              <div className="glass-card p-5 rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-white">6-Month Sleeper Lift Targets</h3>
+                  <span className="text-xs text-slate-400">Targeting 5-Rep Maxes</span>
+                </div>
+
+                <div className="space-y-4">
+                  {TARGET_LIFTS.map(lift => {
+                    const currentMax = maxLifts[lift.id] || lift.start;
+                    const pct = Math.min(100, Math.max(0, Math.round(((currentMax - lift.start) / (lift.target - lift.start)) * 100)));
+                    return (
+                      <div key={lift.id} className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-semibold text-slate-200">{lift.name}</span>
+                          <span className="text-slate-400">
+                            Current Est: <strong className="text-blue-400">{currentMax} {lift.unit}</strong> / Target: <strong className="text-emerald-400">{lift.target} {lift.unit}</strong>
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-3 rounded-full p-0.5 overflow-hidden flex items-center">
+                          <div 
+                            className="bg-gradient-to-r from-blue-600 to-emerald-500 h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${pct}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* QUICK LAUNCH WORKOUT BUTTON */}
+              <div className="glass-card p-6 rounded-2xl border border-blue-500/30 bg-gradient-to-br from-slate-900 to-blue-950/40">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Ready for the gym?</span>
+                    <h3 className="text-xl font-bold text-white mt-0.5">Start Today's Workout</h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {WORKOUT_PROGRAMS[currentPhase].workouts[selectedWorkout].name}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+                      <button
+                        onClick={() => setSelectedWorkout('A')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-md ${selectedWorkout === 'A' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                      >
+                        Workout A
+                      </button>
+                      <button
+                        onClick={() => setSelectedWorkout('B')}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-md ${selectedWorkout === 'B' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                      >
+                        Workout B
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => {
+                        handleStartWorkout();
+                        setActiveTab('logger');
+                      }}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl shadow-lg glow-blue transition-all"
+                    >
+                      Launch Log →
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 2: WORKOUT LOGGER */}
+          {activeTab === 'logger' && (
+            <div>
+              {!isWorkingOut ? (
+                /* SELECT WORKOUT BEFORE STARTING */
+                <div className="glass-card p-6 rounded-2xl space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Select Gym Session</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">{WORKOUT_PROGRAMS[currentPhase].title}</p>
+                    </div>
+                    
+                    {/* PHASE SWITCHER */}
+                    <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+                      <button
+                        onClick={() => setCurrentPhase('phase1')}
+                        className={`px-3 py-1.5 rounded-md font-medium ${currentPhase === 'phase1' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                      >
+                        Phase 1 (Months 1–3)
+                      </button>
+                      <button
+                        onClick={() => setCurrentPhase('phase2')}
+                        className={`px-3 py-1.5 rounded-md font-medium ${currentPhase === 'phase2' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                      >
+                        Phase 2 (Months 4–6)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* WORKOUT A VS B SELECTION */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {['A', 'B'].map(type => {
+                      const w = WORKOUT_PROGRAMS[currentPhase].workouts[type];
+                      const isSel = selectedWorkout === type;
+                      return (
+                        <div
+                          key={type}
+                          onClick={() => setSelectedWorkout(type)}
+                          className={`p-5 rounded-xl border cursor-pointer transition-all ${
+                            isSel 
+                              ? 'bg-blue-950/40 border-blue-500/80 glow-blue' 
+                              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-base font-bold text-white">{w.name}</h3>
+                            <span className={`text-xs px-2 py-0.5 rounded ${isSel ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                              Workout {type}
+                            </span>
+                          </div>
+                          <ul className="space-y-1.5 text-xs text-slate-300 mb-4">
+                            {w.exercises.map((ex, i) => (
+                              <li key={i} className="flex justify-between border-b border-slate-800/50 pb-1">
+                                <span>{ex.name}</span>
+                                <span className="text-slate-400 font-mono">{ex.sets} sets × {ex.reps}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={handleStartWorkout}
+                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-base rounded-xl shadow-lg glow-blue transition-all"
+                  >
+                    Start {WORKOUT_PROGRAMS[currentPhase].workouts[selectedWorkout].name}
+                  </button>
+                </div>
+              ) : (
+                /* LIVE SESSION LOGGER */
+                <div className="space-y-6">
+                  <div className="glass-card p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-blue-400 font-bold uppercase tracking-wider">Live Gym Session</span>
+                      <h2 className="text-lg font-bold text-white">{WORKOUT_PROGRAMS[currentPhase].workouts[selectedWorkout].name}</h2>
+                    </div>
+                    <button
+                      onClick={handleFinishWorkout}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-md glow-emerald transition-all"
+                    >
+                      Finish & Save
+                    </button>
+                  </div>
+
+                  {/* EXERCISES LIST */}
+                  <div className="space-y-4">
+                    {activeSessionData.map((ex, exIdx) => {
+                      const progEx = WORKOUT_PROGRAMS[currentPhase].workouts[selectedWorkout].exercises[exIdx];
+                      return (
+                        <div key={exIdx} className="glass-card p-4 rounded-xl space-y-3">
+                          <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <div>
+                              <h3 className="font-bold text-white text-sm">{ex.name}</h3>
+                              <p className="text-xs text-slate-400">Target: {progEx.sets} sets × {progEx.reps} reps ({progEx.rest}s rest)</p>
+                            </div>
+                            <button
+                              onClick={() => startRestTimer(progEx.rest)}
+                              className="text-xs bg-slate-800 hover:bg-slate-700 text-blue-400 px-2.5 py-1 rounded border border-slate-700"
+                            >
+                              ⏱ {progEx.rest}s Rest
+                            </button>
+                          </div>
+
+                          {/* SETS ROW TABLE */}
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-12 text-xs text-slate-400 font-semibold px-1">
+                              <span className="col-span-2">SET</span>
+                              <span className="col-span-3">KG</span>
+                              <span className="col-span-3">REPS</span>
+                              <span className="col-span-2">RIR</span>
+                              <span className="col-span-2 text-right">DONE</span>
+                            </div>
+
+                            {ex.sets.map((set, setIdx) => (
+                              <div 
+                                key={setIdx} 
+                                className={`grid grid-cols-12 items-center gap-2 p-1.5 rounded-lg border transition-all ${
+                                  set.completed ? 'bg-emerald-950/20 border-emerald-500/40' : 'bg-slate-900/80 border-slate-800'
+                                }`}
+                              >
+                                <span className="col-span-2 text-xs font-bold text-slate-300 font-mono">
+                                  #{set.setNum}
+                                </span>
+                                
+                                <input
+                                  type="number"
+                                  step="0.5"
+                                  value={set.weight}
+                                  onChange={(e) => handleUpdateSet(exIdx, setIdx, 'weight', parseFloat(e.target.value) || 0)}
+                                  className="col-span-3 bg-slate-950 text-white font-mono text-xs px-2 py-1 rounded border border-slate-700 focus:border-blue-500 text-center"
+                                />
+
+                                <input
+                                  type="number"
+                                  value={set.reps}
+                                  onChange={(e) => handleUpdateSet(exIdx, setIdx, 'reps', parseInt(e.target.value) || 0)}
+                                  className="col-span-3 bg-slate-950 text-white font-mono text-xs px-2 py-1 rounded border border-slate-700 focus:border-blue-500 text-center"
+                                />
+
+                                <select
+                                  value={set.rir}
+                                  onChange={(e) => handleUpdateSet(exIdx, setIdx, 'rir', parseInt(e.target.value))}
+                                  className="col-span-2 bg-slate-950 text-slate-300 text-xs px-1 py-1 rounded border border-slate-700 font-mono text-center"
+                                >
+                                  <option value={0}>0 (Max)</option>
+                                  <option value={1}>1 RIR</option>
+                                  <option value={2}>2 RIR</option>
+                                  <option value={3}>3 RIR</option>
+                                </select>
+
+                                <div className="col-span-2 text-right">
+                                  <button
+                                    onClick={() => toggleSetComplete(exIdx, setIdx, progEx.rest)}
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
+                                      set.completed
+                                        ? 'bg-emerald-500 text-slate-950 shadow'
+                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                    }`}
+                                  >
+                                    ✓
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={handleFinishWorkout}
+                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base rounded-xl shadow-lg glow-emerald transition-all"
+                  >
+                    Finish Session & Save Log
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: PROTEIN TRACKER */}
+          {activeTab === 'protein' && (
+            <div className="space-y-6">
+              <div className="glass-card p-6 rounded-2xl text-center space-y-4">
+                <h2 className="text-xl font-bold text-white">Daily Protein Goal (140g–160g)</h2>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  To build dense muscle without getting bulky, aim for ~1.8g protein per kg of body weight (approx. 145g for an 80kg lifter).
+                </p>
+
+                {/* CIRCULAR PROGRESS DISPLAY */}
+                <div className="relative w-44 h-44 mx-auto flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="8" className="text-slate-800" fill="transparent" />
+                    <circle 
+                      cx="50" 
+                      cy="50" 
+                      r="42" 
+                      stroke="currentColor" 
+                      strokeWidth="8" 
+                      className="text-emerald-500 transition-all duration-500" 
+                      fill="transparent"
+                      strokeDasharray={264}
+                      strokeDashoffset={264 - (264 * Math.min(100, (proteinIntake / proteinGoal) * 100)) / 100}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute text-center">
+                    <span className="text-4xl font-black text-white font-mono">{proteinIntake}</span>
+                    <span className="text-xs text-slate-400 block font-semibold">/ {proteinGoal}g Protein</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-center gap-2">
+                  <button 
+                    onClick={() => setProteinIntake(0)}
+                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-400 rounded"
+                  >
+                    Reset Today
+                  </button>
+                </div>
+              </div>
+
+              {/* QUICK ADD BUTTONS */}
+              <div className="glass-card p-5 rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Quick Add Protein</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: '+25g Whey Shake', amount: 25, icon: '🥛' },
+                    { label: '+40g Chicken / Steak', amount: 40, icon: '🥩' },
+                    { label: '+30g Eggs & Toast', amount: 30, icon: '🍳' },
+                    { label: '+50g Bolognese / Ragu', amount: 50, icon: '🍝' },
+                  ].map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={() => addProtein(item.amount)}
+                      className="p-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all group"
+                    >
+                      <span className="text-2xl block mb-1">{item.icon}</span>
+                      <span className="text-xs font-bold text-slate-200 block group-hover:text-blue-400">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* MEAL CHEAT SHEET */}
+              <div className="glass-card p-5 rounded-2xl space-y-3">
+                <h3 className="text-sm font-bold text-white">140g Protein Cheat Sheet for 80kg Lifters</h3>
+                <div className="space-y-2 text-xs text-slate-300">
+                  <div className="flex justify-between p-2 bg-slate-900/60 rounded border border-slate-800">
+                    <span>3-4 Eggs on Wholemeal Toast</span>
+                    <strong className="text-emerald-400 font-mono">~25g protein</strong>
+                  </div>
+                  <div className="flex justify-between p-2 bg-slate-900/60 rounded border border-slate-800">
+                    <span>200g Chicken Breast / Beef Steak</span>
+                    <strong className="text-emerald-400 font-mono">~45g protein</strong>
+                  </div>
+                  <div className="flex justify-between p-2 bg-slate-900/60 rounded border border-slate-800">
+                    <span>200g 5% Beef Mince Portion</span>
+                    <strong className="text-emerald-400 font-mono">~42g protein</strong>
+                  </div>
+                  <div className="flex justify-between p-2 bg-slate-900/60 rounded border border-slate-800">
+                    <span>1 Scoop Whey Protein Powder</span>
+                    <strong className="text-emerald-400 font-mono">~25g protein</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: FORM CUES */}
+          {activeTab === 'guide' && (
+            <div className="space-y-4">
+              <div className="glass-card p-4 rounded-xl">
+                <h2 className="text-lg font-bold text-white">Form & Safety Pocket Guide</h2>
+                <p className="text-xs text-slate-400">Quick cues to review before unracking heavy weights.</p>
+              </div>
+
+              {FORM_GUIDES.map(guide => (
+                <div key={guide.id} className="glass-card p-5 rounded-xl space-y-2">
+                  <h3 className="text-base font-bold text-blue-400 flex items-center gap-2">
+                    <span>🏋️‍♂️</span> {guide.name}
+                  </h3>
+                  <ul className="space-y-1.5 text-xs text-slate-300">
+                    {guide.cues.map((cue, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-blue-500 font-bold">•</span>
+                        <span>{cue}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* TAB 5: HISTORY & CSV EXPORT */}
+          {activeTab === 'stats' && (
+            <div className="space-y-6">
+              <div className="glass-card p-5 rounded-2xl flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Workout History</h2>
+                  <p className="text-xs text-slate-400">{workoutLogs.length} sessions logged</p>
+                </div>
+                <button
+                  onClick={exportCSV}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow glow-blue transition-all"
+                >
+                  📥 Export CSV
+                </button>
+              </div>
+
+              {/* LOG LIST */}
+              {workoutLogs.length === 0 ? (
+                <div className="glass-card p-8 rounded-2xl text-center text-slate-400 text-xs">
+                  No completed workouts logged yet. Complete a session in the Workout Log tab to build your history!
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {workoutLogs.map((log) => (
+                    <div key={log.id} className="glass-card p-4 rounded-xl space-y-2 border-l-4 border-blue-500">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-white text-sm">{log.name}</span>
+                        <span className="text-slate-400">{log.date}</span>
+                      </div>
+                      <div className="flex gap-4 text-xs text-slate-400 font-mono">
+                        <span>Phase: {log.phase}</span>
+                        <span>Total Volume: <strong className="text-emerald-400">{log.totalVolume} kg</strong></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+
+  <script>
+    // Register the offline app shell. The service worker also caches the CDN
+    // libraries used by the original tracker after the first online visit.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(err =>
+          console.warn('Offline support could not be registered:', err)
+        );
+      });
+    }
+  </script>
+</body>
+</html>
